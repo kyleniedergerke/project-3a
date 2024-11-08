@@ -1,91 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Stock Data Visualization</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Data Visualizer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
         }
-
-        h1 {
-            color: #333;
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-
-        form {
-            margin: 20px 0;
+        select, input, button {
+            padding: 8px;
+            margin: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
         }
-
-        select {
-            padding: 5px;
-            margin-right: 10px;
-        }
-
         button {
-            padding: 5px 10px;
-            background-color: #007bff;
+            background-color: #4CAF50;
             color: white;
             border: none;
             cursor: pointer;
+            padding: 10px 20px;
+            width: auto;
         }
-
         button:hover {
-            background-color: #0056b3;
+            background-color: #45a049;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid red;
+            border-radius: 4px;
+            display: none;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chart-container {
+            margin-top: 20px;
+            overflow: auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
         }
     </style>
 </head>
-
 <body>
-    <h1>Stock Data Visualization</h1>
-    <form method="POST">
-        <label for="symbols">Select Stock Symbol:</label>
-        <select name="stock_symbols" id="stock_symbols" required>
-            <option value="">Select a Stock Symbol</option>
-            {% for symbols in stock_symbols %}
-            <option value="{{ symbols }}">{{ symbols }}</option>
-            {% endfor %}
-        </select>
+    <div class="container">
+        <h1>Stock Data Visualizer</h1>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="stock_symbols">Stock Symbol:</label>
+                <select name="stock_symbols" id="stock_symbols" required>
+                    <option value="" disabled selected>Select a stock</option>
+                    {% for symbol in stock_symbols %}
+                    <option value="{{ symbol }}">{{ symbol }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <br />
-        <label for="chartType">Choose Chart Type:</label>
-        <select id="chartType" name="chartType" required>
-            <option value="">Select a Chart Type</option>
-            <option value="line">1. Line</option>
-            <option value="bar">2. Bar</option>
-            <!-- Add chart types here -->
-        </select>
-        <br />
+            <div class="form-group">
+                <label for="chartType">Chart Type:</label>
+                <select name="chartType" id="chartType" required>
+                    <option value="" disabled selected>Select chart type</option>
+                    <option value="line">Line</option>
+                    <option value="bar">Bar</option>
+                </select>
+            </div>
 
-        <label for="timeSeries">Choose Time Series:</label>
-        <select id="timeSeries" name="timeSeries" required>
-            <option value="">Select a Time Series</option>
-            <option value="TIME_SERIES_INTRADAY">1. Intraday</option>
-            <option value="TIME_SERIES_DAILY">2. Daily</option>
-            <option value="TIME_SERIES_WEEKLY">3. Weekly</option>
-            <option value="TIME_SERIES_MONTHLY">4. Monthly</option>
-        </select>
-        <br />
+            <div class="form-group">
+                <label for="timeSeries">Time Series:</label>
+                <select name="timeSeries" id="timeSeries" required>
+                    <option value="" disabled selected>Select time series</option>
+                    <option value="TIME_SERIES_INTRADAY">Intraday</option>
+                    <option value="TIME_SERIES_DAILY">Daily</option>
+                    <option value="TIME_SERIES_WEEKLY">Weekly</option>
+                    <option value="TIME_SERIES_MONTHLY">Monthly</option>
+                </select>
+            </div>
 
-        <label for="startDate">Start Date:</label>
-        <input type="date" id="startDate" name="startDate" required/>
-        <br />
+            <div class="form-group">
+                <label for="startDate">Start Date:</label>
+                <input type="date" id="startDate" name="startDate" required>
+            </div>
 
-        <label for="endDate">End Date:</label>
-        <input type="date" id="endDate" name="endDate" required/>
-        <br />
+            <div class="form-group">
+                <label for="endDate">End Date:</label>
+                <input type="date" id="endDate" name="endDate" required>
+            </div>
 
-        <button type="submit">Generate Chart</button>
+            <button type="submit" onclick="showLoader()">Generate Chart</button>
+        </form>
+        <div id="loader" class="loader"></div>
+        {% if error_message %}
+        <div id="error-message" class="error" style="display: block;">{{ error_message }}</div>
+        {% endif %}
 
-
-    </form>
-
-    <div id="chart-container">
         {% if chart_file %}
-            <embed type="image/svg+xml" src="{{ chart_file }}" width="100%" height="600">
+        <div class="chart-container">
+            <embed type="image/svg+xml" src="{{ chart_file }}" style="width: 100%;">
+        </div>
         {% endif %}
     </div>
-</body>
 
+    <script>
+        function showLoader() {
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        // Show error message if it exists
+        window.onload = function() {
+            const errorMessage = document.getElementById('error-message');
+            if (errorMessage.textContent.trim() !== '') {
+                errorMessage.style.display = 'block';
+            }
+        }
+
+        // Set min/max dates for date inputs
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Set max date to today
+        startDate.max = today;
+        endDate.max = today;
+        
+        // Update min/max dates when either input changes
+        startDate.addEventListener('change', function() {
+            endDate.min = this.value;
+        });
+        
+        endDate.addEventListener('change', function() {
+            startDate.max = this.value;
+        });
+    </script>
+</body>
 </html>
